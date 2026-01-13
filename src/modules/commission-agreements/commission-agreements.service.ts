@@ -46,4 +46,20 @@ export class CommissionAgreementsService extends BaseService<CommissionAgreement
   async findOne(id: string): Promise<CommissionAgreement> {
     return super.findOne(id, { include: { tierRules: true } });
   }
+
+  async findActiveAgreement(
+    hotelId: string,
+  ): Promise<CommissionAgreement | null> {
+    const now = new Date();
+    return (this.model as any).findFirst({
+      where: {
+        hotelId,
+        isActive: true,
+        effectiveFrom: { lte: now },
+        OR: [{ effectiveUntil: { gte: now } }, { effectiveUntil: null }],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { tierRules: true },
+    });
+  }
 }
