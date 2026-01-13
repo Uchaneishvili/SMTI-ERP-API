@@ -17,6 +17,7 @@ export class TierRuleResponseDto {
 
   @ApiProperty()
   @Expose()
+  @Type(() => Number)
   declare bonusRate: number;
 }
 
@@ -35,10 +36,12 @@ export class CommissionAgreementResponseDto {
 
   @ApiProperty()
   @Expose()
+  @Type(() => Number)
   declare baseRate: number;
 
   @ApiProperty({ required: false })
   @Expose()
+  @Type(() => Number)
   declare preferredBonusRate: number | null;
 
   @ApiProperty()
