@@ -11,7 +11,15 @@ export interface CrudDelegate<T> {
   delete(args: any): Promise<T>;
 }
 
-export abstract class BaseService<T> {
+export interface QueryParams {
+  pagination?: { page: number; limit: number };
+  search?: { query: string; fields: string[] };
+  include?: Record<string, any>;
+  where?: Record<string, any>;
+  [key: string]: any;
+}
+
+export abstract class BaseService<T, C = unknown, U = unknown> {
   constructor(
     protected readonly model: CrudDelegate<T>,
     protected readonly entityName: string,
@@ -21,19 +29,15 @@ export abstract class BaseService<T> {
     PrismaErrorHandler.handle(error, this.entityName);
   }
 
-  async create(data: any): Promise<T> {
+  async create(data: C, options: Record<string, any> = {}): Promise<T> {
     try {
-      return await this.model.create({ data });
+      return await this.model.create({ data, ...options });
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  async findAll(params?: {
-    pagination?: { page: number; limit: number };
-    search?: { query: string; fields: string[] };
-    [key: string]: any;
-  }): Promise<T[]> {
+  async findAll(params?: QueryParams): Promise<T[]> {
     const { pagination, search, ...otherParams } = params || {};
 
     // Pagination logic
@@ -50,15 +54,16 @@ export abstract class BaseService<T> {
     return this.model.findMany({
       skip,
       take,
-      orderBy: { createdAt: 'desc' } as any,
+      orderBy: { createdAt: 'desc' },
       ...otherParams,
       where,
     });
   }
 
-  async findOne(id: string): Promise<T> {
+  async findOne(id: string, options: Record<string, any> = {}): Promise<T> {
     const item = await this.model.findUnique({
       where: { id },
+      ...options,
     });
 
     if (!item) {
@@ -70,7 +75,7 @@ export abstract class BaseService<T> {
     return item;
   }
 
-  async update(id: string, data: any): Promise<T> {
+  async update(id: string, data: U): Promise<T> {
     await this.findOne(id);
 
     try {

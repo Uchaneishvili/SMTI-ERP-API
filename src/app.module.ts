@@ -10,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
 import { HotelsModule } from './modules/hotels/hotels.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
+import { CommissionAgreementsModule } from './modules/commission-agreements/commission-agreements.module';
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -81,7 +82,10 @@ const logFormat = winston.format.combine(
 
     // Feature modules
     HealthModule,
+    // Feature modules
+    HealthModule,
     HotelsModule,
+    CommissionAgreementsModule,
   ],
 })
 export class AppModule implements NestModule {
