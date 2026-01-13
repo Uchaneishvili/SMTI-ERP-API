@@ -11,3 +11,5 @@ export class CalculateCommissionDto {
   @IsUUID()
   bookingId!: string;
 }
+
+export * from './month-query.dto';

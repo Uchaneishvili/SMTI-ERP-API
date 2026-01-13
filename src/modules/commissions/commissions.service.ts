@@ -189,4 +189,172 @@ export class CommissionsService {
       matchedRule,
     };
   }
+
+  private getMonthDateRange(month: string): { startDate: Date; endDate: Date } {
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 1);
+    return { startDate, endDate };
+  }
+
+  async getMonthlySummary(month: string) {
+    const { startDate, endDate } = this.getMonthDateRange(month);
+
+    const records = await this.prisma.commissionRecord.findMany({
+      where: {
+        calculatedAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      },
+      include: {
+        booking: {
+          include: { hotel: true },
+        },
+        agreement: true,
+      },
+    });
+
+    const hotelSummaries = new Map<
+      string,
+      {
+        hotelId: string;
+        hotelName: string;
+        hotelStatus: string;
+        totalBookings: number;
+        totalBookingAmount: Decimal;
+        totalCommission: Decimal;
+        averageRate: Decimal;
+      }
+    >();
+
+    let grandTotalBookings = 0;
+    let grandTotalBookingAmount = new Decimal(0);
+    let grandTotalCommission = new Decimal(0);
+
+    for (const record of records) {
+      const hotelId = record.booking.hotelId;
+      const hotelName = record.booking.hotel?.name ?? 'Unknown';
+      const hotelStatus = record.booking.hotel?.status ?? 'STANDARD';
+
+      if (!hotelSummaries.has(hotelId)) {
+        hotelSummaries.set(hotelId, {
+          hotelId,
+          hotelName,
+          hotelStatus,
+          totalBookings: 0,
+          totalBookingAmount: new Decimal(0),
+          totalCommission: new Decimal(0),
+          averageRate: new Decimal(0),
+        });
+      }
+
+      const summary = hotelSummaries.get(hotelId)!;
+      summary.totalBookings += 1;
+      summary.totalBookingAmount = summary.totalBookingAmount.plus(
+        record.bookingAmount,
+      );
+      summary.totalCommission = summary.totalCommission.plus(
+        record.commissionAmount,
+      );
+
+      grandTotalBookings += 1;
+      grandTotalBookingAmount = grandTotalBookingAmount.plus(
+        record.bookingAmount,
+      );
+      grandTotalCommission = grandTotalCommission.plus(record.commissionAmount);
+    }
+
+    const hotels = Array.from(hotelSummaries.values()).map((h) => ({
+      ...h,
+      totalBookingAmount: h.totalBookingAmount.toNumber(),
+      totalCommission: h.totalCommission.toNumber(),
+      averageRate: h.totalBookingAmount.isZero()
+        ? 0
+        : h.totalCommission.div(h.totalBookingAmount).toNumber(),
+    }));
+
+    return {
+      month,
+      period: {
+        from: startDate.toISOString(),
+        to: new Date(endDate.getTime() - 1).toISOString(),
+      },
+      summary: {
+        totalHotels: hotels.length,
+        totalBookings: grandTotalBookings,
+        totalBookingAmount: grandTotalBookingAmount.toNumber(),
+        totalCommission: grandTotalCommission.toNumber(),
+        averageCommissionRate: grandTotalBookingAmount.isZero()
+          ? 0
+          : grandTotalCommission.div(grandTotalBookingAmount).toNumber(),
+      },
+      hotels,
+    };
+  }
+
+  async getMonthlyRecords(month: string) {
+    const { startDate, endDate } = this.getMonthDateRange(month);
+
+    const records = await this.prisma.commissionRecord.findMany({
+      where: {
+        calculatedAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      },
+      include: {
+        booking: {
+          include: { hotel: true },
+        },
+        agreement: true,
+      },
+      orderBy: { calculatedAt: 'asc' },
+    });
+
+    return records.map((r) => ({
+      id: r.id,
+      bookingId: r.bookingId,
+      bookingReference: r.booking.bookingReference,
+      hotelId: r.booking.hotelId,
+      hotelName: r.booking.hotel?.name ?? 'Unknown',
+      hotelStatus: r.booking.hotel?.status ?? 'STANDARD',
+      bookingAmount: r.bookingAmount.toNumber(),
+      currency: r.currency,
+      rateType: r.agreement.rateType,
+      baseRate: r.baseRate.toNumber(),
+      preferredBonus: r.preferredBonus.toNumber(),
+      tierBonus: r.tierBonus.toNumber(),
+      totalRate: r.totalRate.toNumber(),
+      commissionAmount: r.commissionAmount.toNumber(),
+      calculatedAt: r.calculatedAt.toISOString(),
+    }));
+  }
+
+  recordsToCsv(
+    records: Awaited<ReturnType<typeof this.getMonthlyRecords>>,
+  ): string {
+    if (records.length === 0) {
+      return '';
+    }
+
+    const headers = Object.keys(records[0]);
+    const csvLines = [headers.join(',')];
+
+    for (const record of records) {
+      const values = headers.map((h) => {
+        const val = (record as Record<string, unknown>)[h];
+        if (
+          typeof val === 'string' &&
+          (val.includes(',') || val.includes('"'))
+        ) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return String(val);
+      });
+      csvLines.push(values.join(','));
+    }
+
+    return csvLines.join('\n');
+  }
 }
