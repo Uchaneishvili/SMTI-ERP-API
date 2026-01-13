@@ -17,31 +17,38 @@ import {
   ApiParam,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { Hotel } from '@prisma/client';
 import { HotelsService } from './hotels.service';
-import { CreateHotelDto, UpdateHotelDto } from './dto';
+import { CreateHotelDto, UpdateHotelDto, HotelResponseDto } from './dto';
+import { Hotel } from '@prisma/client';
+import { Serialize } from '../../common/interceptors/serialize.interceptor';
 
 @ApiTags('Hotels')
 @ApiBearerAuth()
 @Controller('hotels')
+@Serialize(HotelResponseDto)
 export class HotelsController {
   constructor(private readonly hotelsService: HotelsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new hotel' })
-  @ApiResponse({ status: 201, description: 'Hotel created successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({
-    status: 409,
-    description: 'Hotel with this name already exists',
+    status: 201,
+    description: 'Hotel created successfully',
+    type: HotelResponseDto,
   })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 409, description: 'Hotel already exists' })
   create(@Body() createHotelDto: CreateHotelDto): Promise<Hotel> {
     return this.hotelsService.create(createHotelDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all hotels' })
-  @ApiResponse({ status: 200, description: 'List of all hotels' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all hotels',
+    type: [HotelResponseDto],
+  })
   findAll(): Promise<Hotel[]> {
     return this.hotelsService.findAll();
   }
@@ -49,7 +56,11 @@ export class HotelsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a hotel by ID' })
   @ApiParam({ name: 'id', description: 'Hotel UUID' })
-  @ApiResponse({ status: 200, description: 'Hotel found' })
+  @ApiResponse({
+    status: 200,
+    description: 'Hotel found',
+    type: HotelResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Hotel not found' })
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Hotel> {
     return this.hotelsService.findOne(id);
@@ -58,12 +69,13 @@ export class HotelsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a hotel' })
   @ApiParam({ name: 'id', description: 'Hotel UUID' })
-  @ApiResponse({ status: 200, description: 'Hotel updated successfully' })
-  @ApiResponse({ status: 404, description: 'Hotel not found' })
   @ApiResponse({
-    status: 409,
-    description: 'Hotel with this name already exists',
+    status: 200,
+    description: 'Hotel updated successfully',
+    type: HotelResponseDto,
   })
+  @ApiResponse({ status: 404, description: 'Hotel not found' })
+  @ApiResponse({ status: 409, description: 'Hotel name conflict' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateHotelDto: UpdateHotelDto,
