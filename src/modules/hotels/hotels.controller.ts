@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +19,12 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { HotelsService } from './hotels.service';
-import { CreateHotelDto, UpdateHotelDto, HotelResponseDto } from './dto';
+import {
+  CreateHotelDto,
+  UpdateHotelDto,
+  HotelResponseDto,
+  PaginationQueryDto,
+} from './dto';
 import { Hotel } from '@prisma/client';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
 
@@ -49,8 +55,13 @@ export class HotelsController {
     description: 'List of all hotels',
     type: [HotelResponseDto],
   })
-  findAll(): Promise<Hotel[]> {
-    return this.hotelsService.findAll();
+  findAll(@Query() query: PaginationQueryDto): Promise<Hotel[]> {
+    const { page = 1, limit = 10, search } = query;
+
+    return this.hotelsService.findAll({
+      pagination: { page, limit },
+      search: search ? { query: search, fields: ['name'] } : undefined,
+    });
   }
 
   @Get(':id')

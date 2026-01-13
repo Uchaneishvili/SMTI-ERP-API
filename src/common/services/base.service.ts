@@ -1,5 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { PrismaErrorHandler } from '../utils/prisma-error.util';
+import { SearchBuilderUtil } from '../utils/search-builder.util';
+import { PaginationUtil } from '../utils/pagination.util';
 
 export interface CrudDelegate<T> {
   findMany(args?: any): Promise<T[]>;
@@ -27,10 +29,30 @@ export abstract class BaseService<T> {
     }
   }
 
-  async findAll(params?: any): Promise<T[]> {
+  async findAll(params?: {
+    pagination?: { page: number; limit: number };
+    search?: { query: string; fields: string[] };
+    [key: string]: any;
+  }): Promise<T[]> {
+    const { pagination, search, ...otherParams } = params || {};
+
+    // Pagination logic
+    const { skip, take } = pagination
+      ? PaginationUtil.buildPagination(pagination.page, pagination.limit)
+      : { skip: undefined, take: undefined };
+
+    // Search logic
+    const where = SearchBuilderUtil.buildWhereClause({
+      search,
+      filter: otherParams.where,
+    });
+
     return this.model.findMany({
+      skip,
+      take,
       orderBy: { createdAt: 'desc' } as any,
-      ...params,
+      ...otherParams,
+      where,
     });
   }
 
