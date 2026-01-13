@@ -7,11 +7,15 @@ export interface SearchOptions {
 }
 
 export class SearchBuilderUtil {
-  static buildWhereClause(options: SearchOptions): any {
+  static buildWhereClause(options: SearchOptions): Record<string, unknown> {
     const { search, filter } = options;
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
-    if (filter && Object.keys(filter).length > 0) {
+    if (
+      filter &&
+      typeof filter === 'object' &&
+      Object.keys(filter).length > 0
+    ) {
       Object.assign(where, filter);
     }
 

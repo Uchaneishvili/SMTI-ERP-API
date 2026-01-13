@@ -4,19 +4,19 @@ import { SearchBuilderUtil } from '../utils/search-builder.util';
 import { PaginationUtil } from '../utils/pagination.util';
 
 export interface CrudDelegate<T> {
-  findMany(args?: any): Promise<T[]>;
-  findUnique(args: any): Promise<T | null>;
-  create(args: any): Promise<T>;
-  update(args: any): Promise<T>;
-  delete(args: any): Promise<T>;
+  findMany(args?: unknown): Promise<T[]>;
+  findUnique(args: unknown): Promise<T | null>;
+  create(args: unknown): Promise<T>;
+  update(args: unknown): Promise<T>;
+  delete(args: unknown): Promise<T>;
 }
 
 export interface QueryParams {
   pagination?: { page: number; limit: number };
   search?: { query: string; fields: string[] };
-  include?: Record<string, any>;
-  where?: Record<string, any>;
-  [key: string]: any;
+  include?: Record<string, unknown>;
+  where?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export abstract class BaseService<T, C = unknown, U = unknown> {

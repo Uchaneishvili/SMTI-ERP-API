@@ -23,8 +23,4 @@ export class HotelResponseDto {
   @ApiProperty({ description: 'Last update timestamp' })
   @Expose()
   declare updatedAt: Date;
-
-  constructor(partial: Partial<HotelResponseDto>) {
-    Object.assign(this, partial);
-  }
 }
