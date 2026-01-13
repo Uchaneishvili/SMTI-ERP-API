@@ -29,7 +29,7 @@ export abstract class BaseService<T, C = unknown, U = unknown> {
     PrismaErrorHandler.handle(error, this.entityName);
   }
 
-  async create(data: C, options: Record<string, any> = {}): Promise<T> {
+  async create(data: C, options: Record<string, unknown> = {}): Promise<T> {
     try {
       return await this.model.create({ data, ...options });
     } catch (error) {
@@ -60,7 +60,7 @@ export abstract class BaseService<T, C = unknown, U = unknown> {
     });
   }
 
-  async findOne(id: string, options: Record<string, any> = {}): Promise<T> {
+  async findOne(id: string, options: Record<string, unknown> = {}): Promise<T> {
     const item = await this.model.findUnique({
       where: { id },
       ...options,

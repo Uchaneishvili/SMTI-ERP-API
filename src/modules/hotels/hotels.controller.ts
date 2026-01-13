@@ -25,17 +25,22 @@ import {
   HotelResponseDto,
   PaginationQueryDto,
 } from './dto';
-import { Hotel } from '@prisma/client';
+import { Hotel, CommissionAgreement } from '@prisma/client';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
+import { CommissionAgreementsService } from '../commission-agreements/commission-agreements.service';
+import { CommissionAgreementResponseDto } from '../commission-agreements/dto/commission-agreement-response.dto';
 
 @ApiTags('Hotels')
 @ApiBearerAuth()
 @Controller('hotels')
-@Serialize(HotelResponseDto)
 export class HotelsController {
-  constructor(private readonly hotelsService: HotelsService) {}
+  constructor(
+    private readonly hotelsService: HotelsService,
+    private readonly agreementsService: CommissionAgreementsService,
+  ) {}
 
   @Post()
+  @Serialize(HotelResponseDto)
   @ApiOperation({ summary: 'Create a new hotel' })
   @ApiResponse({
     status: 201,
@@ -49,6 +54,7 @@ export class HotelsController {
   }
 
   @Get()
+  @Serialize(HotelResponseDto)
   @ApiOperation({ summary: 'Get all hotels' })
   @ApiResponse({
     status: 200,
@@ -65,6 +71,7 @@ export class HotelsController {
   }
 
   @Get(':id')
+  @Serialize(HotelResponseDto)
   @ApiOperation({ summary: 'Get a hotel by ID' })
   @ApiParam({ name: 'id', description: 'Hotel UUID' })
   @ApiResponse({
@@ -77,7 +84,26 @@ export class HotelsController {
     return this.hotelsService.findOne(id);
   }
 
+  @Get(':id/commission-agreement')
+  @Serialize(CommissionAgreementResponseDto)
+  @ApiOperation({ summary: 'Get the active commission agreement for a hotel' })
+  @ApiParam({ name: 'id', description: 'Hotel UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active commission agreement',
+    type: CommissionAgreementResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Hotel or agreement not found' })
+  async getActiveAgreement(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<CommissionAgreement | null> {
+    // Validate hotel exists first
+    await this.hotelsService.findOne(id);
+    return this.agreementsService.findActiveAgreement(id);
+  }
+
   @Patch(':id')
+  @Serialize(HotelResponseDto)
   @ApiOperation({ summary: 'Update a hotel' })
   @ApiParam({ name: 'id', description: 'Hotel UUID' })
   @ApiResponse({

@@ -12,6 +12,7 @@ import { HotelsModule } from './modules/hotels/hotels.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { CommissionAgreementsModule } from './modules/commission-agreements/commission-agreements.module';
 import { CommissionsModule } from './modules/commissions/commissions.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -83,9 +84,8 @@ const logFormat = winston.format.combine(
 
     // Feature modules
     HealthModule,
-    // Feature modules
-    HealthModule,
     HotelsModule,
+    BookingsModule,
     CommissionAgreementsModule,
     CommissionsModule,
   ],
