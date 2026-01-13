@@ -177,3 +177,48 @@ Monthly summaries are calculated on-demand from `CommissionRecord` data.
 ### Future Improvement
 
 Add materialized views or pre-computed monthly summaries for performance.
+
+---
+
+## 8. What I'd Do Differently
+
+If I had more time or were building this for production:
+
+### Database Performance & Indexing
+
+- **Composite Indexes**: Add composite index on `(hotelId, status, completedAt)` for faster tier bonus calculation
+- **Partial Indexes**: Create partial index `WHERE isActive = true` on CommissionAgreement for faster active agreement lookups
+- **Query Analysis**: Run `EXPLAIN ANALYZE` on critical paths and optimize slow queries
+- **Connection Pooling**: Use PgBouncer for connection pooling under high load
+- **Read Replicas**: Separate read queries (reports) from write queries (calculations)
+
+### Caching Strategy
+
+- **Redis for Agreements**: Cache active agreements by hotelId (TTL: 5 min) since they rarely change
+- **Query Result Caching**: Cache monthly summary results during report generation
+- **Invalidation**: Invalidate cache when agreement is updated
+
+### Query Optimization
+
+- **Aggregation Queries**: Use PostgreSQL `GROUP BY` with `SUM()` instead of fetching all records for summaries
+- **Materialized Views**: Pre-compute monthly summaries as materialized views, refresh nightly
+
+### Infrastructure
+
+- **Managed Database**: AWS RDS or Cloud SQL with automated backups and failover
+- **Horizontal Scaling**: Containerized deployment on ECS/Cloud Run with auto-scaling
+- **CI/CD Pipeline**: GitHub Actions for Lint → Test → Build → Deploy with environment promotion
+
+---
+
+## 9. Assumptions About Unclear Requirements
+
+| Assumption                              | Rationale                                                                         |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| **One active agreement per hotel**      | Requirement implies singular. If multiple overlapping, would need priority field. |
+| **Tier bonus based on booking count**   | "Volume" interpreted as completed booking count, not revenue.                     |
+| **Commissions calculated once**         | Record is immutable. Re-calculation requires deletion.                            |
+| **Monthly reports by calculation date** | Filter by `calculatedAt`, not `bookingDate`.                                      |
+| **Single currency per booking**         | No currency conversion logic implemented.                                         |
+| **Preferred bonus is binary**           | Only `PREFERRED` status hotels get bonus, no sliding scale.                       |
+| **Flat rate is per-booking**            | Fixed amount regardless of booking value.                                         |
