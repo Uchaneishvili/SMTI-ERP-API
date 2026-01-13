@@ -7,3 +7,110 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum HotelStatus {
+  STANDARD
+  PREFERRED
+}
+
+enum CommissionRateType {
+  PERCENTAGE // e.g., 10% of booking amount
+  FLAT       // e.g., CHF 150 per booking
+  TIERED     // Rate changes based on volume
+}
+
+enum BookingStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Hotel {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  status    HotelStatus @default(STANDARD)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  agreements CommissionAgreement[]
+  bookings   Booking[]
+
+  @@map("hotels")
+}
+
+model CommissionAgreement {
+  id                 String             @id @default(uuid())
+  hotelId            String
+  rateType           CommissionRateType
+  baseRate           Decimal            @db.Decimal(10, 4) // e.g., 0.10 for 10% or 150.00 for flat
+  preferredBonusRate Decimal?           @db.Decimal(10, 4) // Extra bonus for preferred hotels
+  effectiveFrom      DateTime           @default(now())
+  effectiveUntil     DateTime?          // NULL means currently active
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+
+  hotel             Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  tierRules         TierRule[]
+  commissionRecords CommissionRecord[]
+
+  @@index([hotelId])
+  @@index([isActive])
+  @@index([effectiveFrom, effectiveUntil])
+  @@map("commission_agreements")
+}
+
+model TierRule {
+  id          String  @id @default(uuid())
+  agreementId String
+  minBookings Int     // Minimum bookings to qualify (e.g., 5)
+  maxBookings Int?    // Maximum bookings (NULL = unlimited)
+  bonusRate   Decimal @db.Decimal(10, 4) // e.g., 0.01 for +1%
+
+  agreement CommissionAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  @@index([agreementId])
+  @@map("tier_rules")
+}
+
+model Booking {
+  id               String        @id @default(uuid())
+  hotelId          String
+  bookingReference String        @unique // External reference number
+  amount           Decimal       @db.Decimal(12, 2) // Booking value
+  currency         String        @default("CHF") @db.VarChar(3)
+  status           BookingStatus @default(PENDING)
+  bookingDate      DateTime      // Date of the booking
+  completedAt      DateTime?     // When marked as completed
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  commissionRecord CommissionRecord?
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([completedAt])
+  @@map("bookings")
+}
+
+model CommissionRecord {
+  id                 String   @id @default(uuid())
+  bookingId          String   @unique
+  agreementId        String
+  bookingAmount      Decimal  @db.Decimal(12, 2) // Snapshot of booking amount
+  currency           String   @db.VarChar(3)
+  baseRate           Decimal  @db.Decimal(10, 4) // Rate used at calculation
+  preferredBonus     Decimal  @db.Decimal(10, 4) @default(0)
+  tierBonus          Decimal  @db.Decimal(10, 4) @default(0)
+  totalRate          Decimal  @db.Decimal(10, 4) // Sum of all rates
+  commissionAmount   Decimal  @db.Decimal(12, 2) // Final commission value
+  calculationDetails Json? // Full audit trail
+  calculatedAt       DateTime @default(now())
+
+  booking   Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  agreement CommissionAgreement @relation(fields: [agreementId], references: [id])
+
+  @@index([agreementId])
+  @@index([calculatedAt])
+  @@map("commission_records")
+}
