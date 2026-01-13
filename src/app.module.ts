@@ -8,6 +8,7 @@ import * as Joi from 'joi';
 import { appConfig } from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
+import { HotelsModule } from './modules/hotels/hotels.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 
 const logFormat = winston.format.combine(
@@ -80,6 +81,7 @@ const logFormat = winston.format.combine(
 
     // Feature modules
     HealthModule,
+    HotelsModule,
   ],
 })
 export class AppModule implements NestModule {
